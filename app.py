@@ -11,7 +11,6 @@ import os
 import tempfile
 from pathlib import Path
 
-import cv2
 import streamlit as st
 from ultralytics import YOLO
 
