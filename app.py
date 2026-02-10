@@ -54,6 +54,7 @@ with open(input_path, "wb") as f:
 st.success("✅ تم رفع الفيديو")
 
 # --- Open video ---
+import cv2
 cap = cv2.VideoCapture(input_path)
 if not cap.isOpened():
     st.error("❌ ما قدرت أفتح الفيديو. جرّب فيديو ثاني.")
