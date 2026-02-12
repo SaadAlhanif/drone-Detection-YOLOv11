@@ -1,208 +1,34 @@
-import os
-import tempfile
-import subprocess
+[     UTC     ] Logs for drone-detection-yolov11-psau.streamlit.app/
 
-import streamlit as st
-from ultralytics import YOLO
-import cv2
-import imageio_ffmpeg
+────────────────────────────────────────────────────────────────────────────────────────
 
+[18:00:52] 🖥 Provisioning machine...
 
-# =========================
-# Page UI
-# =========================
-st.set_page_config(page_title="Drone Detection", layout="wide")
-st.title("Drone Detection (Video)")
-st.write("ارفع فيديو، والنظام بيطلع لك فيديو عليه كشف الدرون + كلمة Drone فوقه.")
+[18:00:52] 🎛 Preparing system...
 
+[18:00:52] ⛓ Spinning up manager process...
 
-# =========================
-# Model
-# =========================
-MODEL_PATH = "best.pt"
+[18:00:55] 🚀 Starting up repository: 'drone-detection-yolov11', branch: 'main', main module: 'app.py'
 
-@st.cache_resource
-def load_model():
-    if not os.path.exists(MODEL_PATH):
-        raise FileNotFoundError(
-            f"❌ ما لقيت ملف المودل: {MODEL_PATH}\n"
-            f"تأكد ان best.pt موجود بنفس مجلد app.py"
-        )
-    return YOLO(MODEL_PATH)
+[18:00:55] 🐙 Cloning repository...
 
-model = load_model()
+[18:00:56] 🐙 Cloning into '/mount/src/drone-detection-yolov11'...
+
+[18:00:56] 🐙 Cloned repository!
+
+[18:00:56] 🐙 Pulling code changes from Github...
+
+[18:00:57] 📦 Processing dependencies...
 
 
-# =========================
-# Controls
-# =========================
-st.sidebar.header("⚙️ Settings")
-conf_thres = st.sidebar.slider("Confidence", 0.05, 0.95, 0.30, 0.05)
-iou_thres  = st.sidebar.slider("IoU", 0.05, 0.95, 0.50, 0.05)
-
-uploaded = st.file_uploader(
-    "📤 ارفع فيديو (mp4/mov/avi/mkv)",
-    type=["mp4", "mov", "avi", "mkv"]
-)
-
-if uploaded is None:
-    st.info("ارفع فيديو عشان نبدأ.")
-    st.stop()
+──────────────────────────────────────── uv ───────────────────────────────────────────
 
 
-# =========================
-# Save input
-# =========================
-tmp_dir = tempfile.mkdtemp()
-input_path = os.path.join(tmp_dir, uploaded.name)
+Using uv pip install.
 
-with open(input_path, "wb") as f:
-    f.write(uploaded.getbuffer())
+Using Python 3.13.12 environment at /home/adminuser/venv
 
-st.success("✅ تم رفع الفيديو")
+Resolved 83 packages in 716ms
 
-
-# =========================
-# Show input video
-# =========================
-st.subheader("🎬 الفيديو الأصلي")
-with open(input_path, "rb") as f:
-    st.video(f.read())
-
-st.divider()
-
-
-# =========================
-# Open video
-# =========================
-cap = cv2.VideoCapture(input_path)
-if not cap.isOpened():
-    st.error("❌ ما قدرت أفتح الفيديو. جرّب فيديو ثاني.")
-    st.stop()
-
-fps = cap.get(cv2.CAP_PROP_FPS)
-if fps is None or fps <= 0:
-    fps = 30.0
-
-width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) if cap.get(cv2.CAP_PROP_FRAME_COUNT) else 0
-
-
-# =========================
-# Output writer
-# =========================
-raw_output_path = os.path.join(tmp_dir, "output_raw.mp4")
-
-fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-writer = cv2.VideoWriter(raw_output_path, fourcc, fps, (width, height))
-
-if not writer.isOpened():
-    st.error("❌ ما قدرت أفتح VideoWriter.")
-    cap.release()
-    st.stop()
-
-
-# =========================
-# Processing
-# =========================
-st.subheader("⚙️ جاري المعالجة...")
-progress = st.progress(0)
-status = st.empty()
-
-LABEL_TEXT = "Drone"
-frame_idx = 0
-
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
-
-    frame_idx += 1
-
-    results = model.predict(frame, conf=conf_thres, iou=iou_thres, verbose=False)
-
-    if results and len(results) > 0:
-        r = results[0]
-        if r.boxes is not None and len(r.boxes) > 0:
-            for b in r.boxes:
-                x1, y1, x2, y2 = map(int, b.xyxy[0].tolist())
-                conf = float(b.conf[0]) if b.conf is not None else 0.0
-
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-
-                txt = f"{LABEL_TEXT} {conf:.2f}"
-                (tw, th), _ = cv2.getTextSize(txt, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
-                y_top = max(y1 - th - 10, 0)
-                cv2.rectangle(frame, (x1, y_top), (x1 + tw + 8, y1), (0, 255, 0), -1)
-
-                cv2.putText(
-                    frame,
-                    txt,
-                    (x1 + 4, max(y1 - 6, 0)),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.7,
-                    (0, 0, 0),
-                    2,
-                    cv2.LINE_AA
-                )
-
-    writer.write(frame)
-
-    if total_frames > 0:
-        p = min(frame_idx / total_frames, 1.0)
-        progress.progress(int(p * 100))
-        status.write(f"Processing frame {frame_idx}/{total_frames} ...")
-
-cap.release()
-writer.release()
-
-progress.progress(100)
-status.write("✅ Finished!")
-
-
-# =========================
-# Convert to H.264
-# =========================
-final_output_path = os.path.join(tmp_dir, "output_h264.mp4")
-
-def convert_to_h264(src, dst):
-    ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
-    cmd = [
-        ffmpeg, "-y",
-        "-i", src,
-        "-vcodec", "libx264",
-        "-pix_fmt", "yuv420p",
-        "-movflags", "+faststart",
-        dst
-    ]
-    subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-try:
-    convert_to_h264(raw_output_path, final_output_path)
-    playable_path = final_output_path
-except Exception:
-    playable_path = raw_output_path
-
-
-# =========================
-# Show output
-# =========================
-st.divider()
-
-st.subheader("📌 الفيديو الناتج")
-
-with open(playable_path, "rb") as f:
-    out_bytes = f.read()
-
-st.video(out_bytes)
-
-st.download_button(
-    "⬇️ Download result video",
-    data=out_bytes,
-    file_name="drone_detection_output.mp4",
-    mime="video/mp4"
-)
-
-st.caption("إذا كان الفيديو طويل جدًا ممكن ياخذ وقت بالمعالجة على")
+main
+saadalhanif/drone-detection-yolov11/main/app.py
