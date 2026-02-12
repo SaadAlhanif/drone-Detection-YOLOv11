@@ -196,20 +196,21 @@ except Exception as e:
 
 
 # =========================
-# Show output (bytes)
+# Show output (bytes) INSIDE col2 (same size as input)
 # =========================
-st.subheader("📌 الفيديو الناتج")
+with col2:
+    st.subheader("📌 الفيديو الناتج")
 
-with open(playable_path, "rb") as f:
-    out_bytes = f.read()
+    with open(playable_path, "rb") as f:
+        out_bytes = f.read()
 
-st.video(out_bytes)
+    st.video(out_bytes)
 
-st.download_button(
-    "⬇️ Download result video",
-    data=out_bytes,
-    file_name="drone_detection_output.mp4",
-    mime="video/mp4"
-)
+    st.download_button(
+        "⬇️ Download result video",
+        data=out_bytes,
+        file_name="drone_detection_output.mp4",
+        mime="video/mp4"
+    )
 
 st.caption("ملاحظة: إذا كان الفيديو طويل جدًا ممكن ياخذ وقت بالمعالجة على Streamlit Cloud.")
