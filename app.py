@@ -23,7 +23,7 @@ video {
     width: 100% !important;
     height: auto !important;
     display: block;
-    margin: 0 auto; /* center */
+    margin-left: 0 !important;
 }
 </style>
 """, unsafe_allow_html=True)
