@@ -19,7 +19,7 @@ st.write("ارفع فيديو، والنظام بيطلع لك فيديو علي
 st.markdown("""
 <style>
 video {
-    max-width: 700px !important;
+    max-width: 500px !important;
     width: 100% !important;
     height: auto !important;
     display: block;
